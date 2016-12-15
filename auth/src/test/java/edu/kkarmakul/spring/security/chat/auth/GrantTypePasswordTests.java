@@ -16,7 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Map;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
@@ -35,17 +35,13 @@ public class GrantTypePasswordTests {
 
     private static final String HAL_JSON_VALUE = "application/hal+json";
     private static final String HAL_JSON_UTF8_VALUE = APPLICATION_JSON_UTF8_VALUE.replace(APPLICATION_JSON_VALUE, HAL_JSON_VALUE);
-
-    @Autowired
-    WebApplicationContext context;
-
-    @Autowired
-    FilterChainProxy filterChain;
-
-    private MockMvc mvc;
-
+    private static final Pattern TOKEN_REGEXP = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private Pattern tokenRegExp = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    @Autowired
+    private WebApplicationContext context;
+    @Autowired
+    private FilterChainProxy filterChain;
+    private MockMvc mvc;
 
     @Before
     public void setUp() {
@@ -60,7 +56,7 @@ public class GrantTypePasswordTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andExpect(content().json(objectMapper.writeValueAsString(
-                        new AuthenticationError("invalid_scope", "Empty scope (either the client or the user is not allowed the requested scopes)")
+                        new AuthenticationError("invalid_scope", "Missing grant type")
                 )));
     }
 
@@ -73,9 +69,9 @@ public class GrantTypePasswordTests {
                         .param("username", "login").param("password", "password"))
                 .andExpect(status().isOk()).andReturn();
 
-        Map answer = objectMapper.readValue(result.getResponse().getContentAsString(), Map.class);
-        assertTrue(tokenRegExp.matcher((CharSequence) answer.get("access_token")).matches());
-        assertTrue(tokenRegExp.matcher((CharSequence) answer.get("refresh_token")).matches());
+        StringMap answer = objectMapper.readValue(result.getResponse().getContentAsString(), StringMap.class);
+        assertToken(answer.get("access_token"));
+        assertToken(answer.get("refresh_token"));
         assertEquals("bearer", answer.get("token_type"));
         assertEquals("read", answer.get("scope"));
         /*
@@ -95,5 +91,14 @@ public class GrantTypePasswordTests {
         assertThat(flight.getFlightNumber()).isEqualTo("OAUTH2");
         assertThat(flight.getTraveler()).isEqualTo("Greg Turnquist");
         */
+    }
+
+    private static void assertToken(CharSequence token) {
+        assertTrue(TOKEN_REGEXP.matcher(token).matches());
+    }
+
+    private static class StringMap extends HashMap<String, String> {
+
+        private static final long serialVersionUID = 5661052487899396349L;
     }
 }
