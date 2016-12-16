@@ -1,5 +1,6 @@
 package edu.kkarmakul.spring.security.chat.auth;
 
+import edu.kkarmakul.spring.security.chat.auth.service.CustomClientDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,6 +17,9 @@ public class AuthorizationServerConfiguration extends AuthorizationServerConfigu
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private CustomClientDetailsService clientDetailsService;
+
     @Override
     public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
         super.configure(security);
@@ -24,15 +28,7 @@ public class AuthorizationServerConfiguration extends AuthorizationServerConfigu
 
     @Override
     public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
-        // @formatter:off
-           clients.inMemory()
-               .withClient("oauthClientId")
-               .authorizedGrantTypes("password", "refresh_token")
-               .authorities("ROLE_CLIENT")
-               .scopes("read")
-               .resourceIds(RESOURCE_ID)
-               .secret("oauthClientSecret");
-           // @formatter:on
+        clients.withClientDetails(clientDetailsService);
     }
 
     @Override
